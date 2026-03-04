@@ -256,6 +256,107 @@ app.post("/api/cards/:id/move", async (c) => {
   }
 });
 
+// OpenAPI spec
+app.get("/openapi.json", (c) => {
+  return c.json({
+    openapi: "3.0.0",
+    info: { title: "Kanban App", version: "1.0.0" },
+    paths: {
+      "/api/lists": {
+        get: {
+          summary: "Get all lists with their cards",
+          responses: {
+            "200": {
+              description: "All lists with nested cards",
+              content: { "application/json": { schema: { type: "object", properties: {
+                lists: { type: "array", items: { allOf: [
+                  { $ref: "#/components/schemas/List" },
+                  { type: "object", properties: { cards: { type: "array", items: { $ref: "#/components/schemas/Card" } } } },
+                ] } },
+              } } } },
+            },
+          },
+        },
+        post: {
+          summary: "Create a new list",
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { title: { type: "string" } }, required: ["title"] } } } },
+          responses: { "201": { description: "Created list", content: { "application/json": { schema: { $ref: "#/components/schemas/List" } } } } },
+        },
+      },
+      "/api/lists/{id}": {
+        put: {
+          summary: "Rename a list",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { title: { type: "string" } }, required: ["title"] } } } },
+          responses: { "200": { description: "Updated list", content: { "application/json": { schema: { $ref: "#/components/schemas/List" } } } } },
+        },
+        delete: {
+          summary: "Delete a list and all its cards",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+          responses: { "200": { description: "{ ok: true }" } },
+        },
+      },
+      "/api/cards": {
+        post: {
+          summary: "Create a new card",
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: {
+            list_id: { type: "integer" },
+            title: { type: "string" },
+            description: { type: "string" },
+          }, required: ["list_id", "title"] } } } },
+          responses: { "201": { description: "Created card", content: { "application/json": { schema: { $ref: "#/components/schemas/Card" } } } } },
+        },
+      },
+      "/api/cards/{id}": {
+        put: {
+          summary: "Update a card",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+          } } } } },
+          responses: { "200": { description: "Updated card", content: { "application/json": { schema: { $ref: "#/components/schemas/Card" } } } } },
+        },
+        delete: {
+          summary: "Delete a card",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+          responses: { "200": { description: "{ ok: true }" } },
+        },
+      },
+      "/api/cards/{id}/move": {
+        post: {
+          summary: "Move a card to a different list and position",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: {
+            target_list_id: { type: "integer" },
+            position: { type: "integer" },
+          }, required: ["target_list_id", "position"] } } } },
+          responses: { "200": { description: "{ ok: true }" } },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        List: { type: "object", properties: {
+          id: { type: "integer" },
+          title: { type: "string" },
+          position: { type: "integer" },
+          created_at: { type: "string" },
+        } },
+        Card: { type: "object", properties: {
+          id: { type: "integer" },
+          list_id: { type: "integer" },
+          title: { type: "string" },
+          description: { type: "string" },
+          position: { type: "integer" },
+          created_at: { type: "string" },
+          updated_at: { type: "string" },
+        } },
+      },
+    },
+  });
+});
+
 // Production: serve Vite build output
 if (process.env.NODE_ENV === "production") {
   app.use("/*", serveStatic({ root: "./dist" }));
