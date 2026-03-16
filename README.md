@@ -1,4 +1,4 @@
-# Clawnify Kanban App: The Open-Source Trello Alternative for SaaS
+# OpenClaw Kanban App: The Open-Source Trello Alternative for SaaS
 
 A lightweight kanban board for building project management tools, task trackers, and workflow apps. Part of the [OpenClaw](https://github.com/openclaw/openclaw) ecosystem. Zero cloud dependencies — runs locally with SQLite.
 
