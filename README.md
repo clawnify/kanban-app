@@ -125,10 +125,6 @@ cards (id, list_id → lists, title, description, position, created_at, updated_
 | DELETE | `/api/cards/:id` | Delete a card |
 | POST | `/api/cards/:id/move` | Move card to another list |
 
-## How Clawnify Uses This
-
-[Clawnify](https://clawnify.com) uses this template as a starting point when AI agents request a kanban or project management app via the App Builder. The `db.ts` file is swapped with a Cloudflare D1 adapter, the code is bundled, and deployed to Workers for Platforms. The rest of the app stays identical.
-
 ## Community & Contributions
 
 This project is part of the [OpenClaw](https://github.com/openclaw/openclaw) ecosystem. Contributions are welcome — open an issue or submit a PR.
