@@ -24,8 +24,8 @@ Unlike Trello, Asana, or Monday.com, this runs entirely on your own infrastructu
 ## Quickstart
 
 ```bash
-git clone https://github.com/clawnify/kanban-app.git
-cd kanban-app
+git clone https://github.com/clawnify/open-kanban.git
+cd open-kanban
 pnpm install
 pnpm run dev
 ```
