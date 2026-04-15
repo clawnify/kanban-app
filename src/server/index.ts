@@ -1,7 +1,14 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { query, get, run } from "./db";
+import { initDB, query, get, run } from "./db.js";
 
-const app = new OpenAPIHono();
+type Env = { Bindings: { DB: D1Database } };
+
+const app = new OpenAPIHono<Env>();
+
+app.use("*", async (c, next) => {
+  initDB(c.env.DB);
+  await next();
+});
 
 // ── Shared Schemas ─────────────────────────────────────────────────
 
@@ -116,7 +123,7 @@ app.openapi(createList, async (c) => {
     );
     const nextPos = (maxPos?.max_pos ?? -1) + 1;
 
-    await run("INSERT INTO lists (title, position) VALUES (?, ?)", title, nextPos);
+    await run("INSERT INTO lists (title, position) VALUES (?, ?)", [title, nextPos]);
     const inserted = await get(
       "SELECT id, title, position, created_at FROM lists WHERE rowid = last_insert_rowid()"
     );
@@ -155,10 +162,10 @@ app.openapi(renameList, async (c) => {
     const title = body.title.trim();
     if (!title) return c.json({ error: "Title is required" }, 400);
 
-    const result = await run("UPDATE lists SET title = ? WHERE id = ?", title, id);
+    const result = await run("UPDATE lists SET title = ? WHERE id = ?", [title, id]);
     if (result.changes === 0) return c.json({ error: "List not found" }, 404);
 
-    const updated = await get("SELECT id, title, position, created_at FROM lists WHERE id = ?", id);
+    const updated = await get("SELECT id, title, position, created_at FROM lists WHERE id = ?", [id]);
     return c.json(updated, 200);
   } catch (err: unknown) {
     return c.json({ error: (err as Error).message }, 500);
@@ -183,7 +190,7 @@ app.openapi(deleteList, async (c) => {
     const { id: idStr } = c.req.valid("param");
     const id = parseInt(idStr, 10);
 
-    const result = await run("DELETE FROM lists WHERE id = ?", id);
+    const result = await run("DELETE FROM lists WHERE id = ?", [id]);
     if (result.changes === 0) return c.json({ error: "List not found" }, 404);
 
     return c.json({ ok: true }, 200);
@@ -223,21 +230,18 @@ app.openapi(createCard, async (c) => {
     const title = body.title.trim();
     if (!title) return c.json({ error: "Title is required" }, 400);
 
-    const list = await get("SELECT id FROM lists WHERE id = ?", body.list_id);
+    const list = await get("SELECT id FROM lists WHERE id = ?", [body.list_id]);
     if (!list) return c.json({ error: "List not found" }, 404);
 
     const maxPos = await get<{ max_pos: number }>(
       "SELECT COALESCE(MAX(position), -1) as max_pos FROM cards WHERE list_id = ?",
-      body.list_id
+      [body.list_id]
     );
     const nextPos = (maxPos?.max_pos ?? -1) + 1;
 
     await run(
       "INSERT INTO cards (list_id, title, description, position) VALUES (?, ?, ?, ?)",
-      body.list_id,
-      title,
-      (body.description || "").trim(),
-      nextPos
+      [body.list_id, title, (body.description || "").trim(), nextPos]
     );
 
     const inserted = await get(
@@ -281,7 +285,7 @@ app.openapi(updateCard, async (c) => {
 
     const existing = await get<{ id: number; title: string; description: string }>(
       "SELECT id, title, description FROM cards WHERE id = ?",
-      id
+      [id]
     );
     if (!existing) return c.json({ error: "Card not found" }, 404);
 
@@ -292,14 +296,12 @@ app.openapi(updateCard, async (c) => {
 
     await run(
       "UPDATE cards SET title = ?, description = ?, updated_at = datetime('now') WHERE id = ?",
-      newTitle,
-      newDesc,
-      id
+      [newTitle, newDesc, id]
     );
 
     const updated = await get(
       "SELECT id, list_id, title, description, position, created_at, updated_at FROM cards WHERE id = ?",
-      id
+      [id]
     );
 
     return c.json(updated, 200);
@@ -326,7 +328,7 @@ app.openapi(deleteCard, async (c) => {
     const { id: idStr } = c.req.valid("param");
     const id = parseInt(idStr, 10);
 
-    const result = await run("DELETE FROM cards WHERE id = ?", id);
+    const result = await run("DELETE FROM cards WHERE id = ?", [id]);
     if (result.changes === 0) return c.json({ error: "Card not found" }, 404);
 
     return c.json({ ok: true }, 200);
@@ -366,25 +368,21 @@ app.openapi(moveCard, async (c) => {
 
     const card = await get<{ id: number; list_id: number; position: number }>(
       "SELECT id, list_id, position FROM cards WHERE id = ?",
-      id
+      [id]
     );
     if (!card) return c.json({ error: "Card not found" }, 404);
 
-    const targetList = await get("SELECT id FROM lists WHERE id = ?", body.target_list_id);
+    const targetList = await get("SELECT id FROM lists WHERE id = ?", [body.target_list_id]);
     if (!targetList) return c.json({ error: "Target list not found" }, 404);
 
     await run(
       "UPDATE cards SET position = position + 1 WHERE list_id = ? AND position >= ? AND id != ?",
-      body.target_list_id,
-      body.position,
-      id
+      [body.target_list_id, body.position, id]
     );
 
     await run(
       "UPDATE cards SET list_id = ?, position = ?, updated_at = datetime('now') WHERE id = ?",
-      body.target_list_id,
-      body.position,
-      id
+      [body.target_list_id, body.position, id]
     );
 
     return c.json({ ok: true }, 200);
